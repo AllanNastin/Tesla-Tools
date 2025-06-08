@@ -57,6 +57,28 @@
             line-height: 1.5;
         }
 
+        input[type="text"] {
+            width: calc(100% - 20px);
+            /* Full width minus padding */
+            padding: 15px 10px;
+            margin-bottom: 25px;
+            /* Space below input */
+            border: 1px solid #333;
+            border-radius: 8px;
+            background-color: #0d0d0d;
+            color: #ffffff;
+            font-size: 1em;
+            box-sizing: border-box;
+            /* Include padding and border in the element's total width and height */
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #cc0000;
+            /* Highlight focus with Tesla red */
+            box-shadow: 0 0 8px rgba(204, 0, 0, 0.5);
+        }
+
         button {
             padding: 18px 35px;
             /* Larger padding for easier tapping */
@@ -121,45 +143,70 @@
 <body>
     <div class="container">
         <h1>Smart Home Hub</h1>
-        <p>Tap the button below to send the command to your smart home system.</p>
+        <p>Enter your webhook URL and tap "Send Command".</p>
+
+        <input type="text" id="webhookUrlInput" placeholder="Enter your webhook URL here">
 
         <button id="triggerButton">Send Command</button>
         <div id="statusMessage"></div>
 
         <script>
-            // The specific webhook URL you want to call
-            const WEBHOOK_URL = 'insert_your_webhook_url_here'; // TODO: Replace with your actual webhook URL Change bellow get to whatever you need likely POST
+            const WEBHOOK_STORAGE_KEY = 'tesla_smart_home_webhook_url'; //  // TODO: Replace with your actual webhook URL Change bellow get to whatever you need likely POST
 
-            document.getElementById('triggerButton').addEventListener('click', function () {
+            document.addEventListener('DOMContentLoaded', function () {
+                const webhookUrlInput = document.getElementById('webhookUrlInput');
+                const triggerButton = document.getElementById('triggerButton');
                 const statusMessageDiv = document.getElementById('statusMessage');
-                statusMessageDiv.className = 'pending'; // Set to pending class
-                statusMessageDiv.textContent = 'Sending command...';
 
-                const xhr = new XMLHttpRequest();
-                xhr.open('GET', WEBHOOK_URL, true); // true for asynchronous
+                // Load webhook URL from localStorage on page load
+                const savedWebhookUrl = localStorage.getItem(WEBHOOK_STORAGE_KEY);
+                if (savedWebhookUrl) {
+                    webhookUrlInput.value = savedWebhookUrl;
+                } else {
+                    // Optional: Set a default or hint if nothing is saved
+                    webhookUrlInput.value = 'insert_your_webhook_url_here';
+                }
 
-                xhr.onload = function () {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        // Webhook call was successful
-                        statusMessageDiv.textContent = 'Command sent successfully!';
-                        statusMessageDiv.classList.remove('pending');
-                        statusMessageDiv.classList.add('success');
-                    } else {
-                        // Webhook returned an error status (e.g., 404, 500)
-                        statusMessageDiv.textContent = `Error: Command failed (Status: ${xhr.status}).`;
+                // Save webhook URL to localStorage whenever the input changes
+                webhookUrlInput.addEventListener('input', function () {
+                    localStorage.setItem(WEBHOOK_STORAGE_KEY, webhookUrlInput.value);
+                });
+
+                triggerButton.addEventListener('click', function () {
+                    const currentWebhookUrl = webhookUrlInput.value.trim();
+
+                    if (!currentWebhookUrl) {
+                        statusMessageDiv.className = 'error';
+                        statusMessageDiv.textContent = 'Error: Please enter a webhook URL.';
+                        return; // Stop execution if no URL is entered
+                    }
+
+                    statusMessageDiv.className = 'pending';
+                    statusMessageDiv.textContent = 'Sending command...';
+
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('GET', currentWebhookUrl, true); // true for asynchronous
+
+                    xhr.onload = function () {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            statusMessageDiv.textContent = 'Command sent successfully!';
+                            statusMessageDiv.classList.remove('pending');
+                            statusMessageDiv.classList.add('success');
+                        } else {
+                            statusMessageDiv.textContent = `Error: Command failed (Status: ${xhr.status}).`;
+                            statusMessageDiv.classList.remove('pending');
+                            statusMessageDiv.classList.add('error');
+                        }
+                    };
+
+                    xhr.onerror = function () {
+                        statusMessageDiv.textContent = 'Error: Check internet connection or URL.';
                         statusMessageDiv.classList.remove('pending');
                         statusMessageDiv.classList.add('error');
-                    }
-                };
+                    };
 
-                xhr.onerror = function () {
-                    // Network error (e.g., internet disconnected, URL unreachable)
-                    statusMessageDiv.textContent = 'Error: Check internet connection or URL.';
-                    statusMessageDiv.classList.remove('pending');
-                    statusMessageDiv.classList.add('error');
-                };
-
-                xhr.send(); // Send the GET request
+                    xhr.send();
+                });
             });
         </script>
     </div>
