@@ -68,9 +68,7 @@
 
         /* Styling for the input fields and textarea */
         input[type="text"],
-        textarea,
-        select {
-            /* Added select for styling consistency */
+        textarea {
             width: calc(100% - 20px);
             /* Full width minus padding */
             padding: 15px 10px;
@@ -101,9 +99,7 @@
         }
 
         input[type="text"]:focus,
-        textarea:focus,
-        select:focus {
-            /* Added select for focus style */
+        textarea:focus {
             outline: none;
             border-color: #cc0000;
             /* Highlight focus with Tesla red */
@@ -301,6 +297,56 @@
             font-style: italic;
             text-align: center;
         }
+
+        /* NEW STYLES FOR METHOD BUTTONS */
+        .method-buttons {
+            display: flex;
+            /* Arrange buttons in a row */
+            gap: 10px;
+            /* Space between buttons */
+            margin-bottom: 20px;
+            /* Space below the group */
+            justify-content: center;
+            /* Center the buttons */
+            flex-wrap: wrap;
+            /* Allow buttons to wrap to the next line if needed */
+        }
+
+        .method-btn {
+            padding: 12px 20px;
+            font-size: 1.1em;
+            background-color: #333;
+            /* Default unselected background */
+            color: #eee;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            flex-grow: 1;
+            /* Allow buttons to grow and fill space */
+            max-width: 120px;
+            /* Limit individual button width */
+        }
+
+        .method-btn:hover {
+            background-color: #555;
+            transform: translateY(-2px);
+        }
+
+        .method-btn.active {
+            background-color: #cc0000;
+            /* Tesla Red for active method */
+            color: white;
+            box-shadow: 0 4px 15px rgba(204, 0, 0, 0.4);
+            /* Glow for active */
+            transform: scale(1.02);
+            /* Slightly larger when active */
+        }
+
+        .method-btn:active {
+            background-color: #990000;
+            transform: translateY(0);
+        }
     </style>
 </head>
 
@@ -315,14 +361,15 @@
         <label for="newButtonUrlInput">Webhook URL:</label>
         <textarea id="newButtonUrlInput" placeholder="Enter the webhook URL for this button" rows="3"></textarea>
 
-        <label for="newButtonMethodSelect">HTTP Method:</label>
-        <select id="newButtonMethodSelect">
-            <option value="GET">GET</option>
-            <option value="POST">POST</option>
-            <option value="PUT">PUT</option>
-            <option value="DELETE">DELETE</option>
-            <option value="PATCH">PATCH</option>
-        </select>
+        <!-- Replaced select dropdown with custom toggle buttons -->
+        <label>HTTP Method:</label>
+        <div id="methodSelection" class="method-buttons">
+            <button type="button" class="method-btn" data-method="GET">GET</button>
+            <button type="button" class="method-btn" data-method="POST">POST</button>
+            <button type="button" class="method-btn" data-method="PUT">PUT</button>
+            <button type="button" class="method-btn" data-method="DELETE">DELETE</button>
+            <button type="button" class="method-btn" data-method="PATCH">PATCH</button>
+        </div>
 
         <button id="saveNewButton">Save Button</button>
         <div id="statusMessage"></div>
@@ -346,10 +393,15 @@
         document.addEventListener('DOMContentLoaded', function () {
             const newButtonNameInput = document.getElementById('newButtonNameInput');
             const newButtonUrlInput = document.getElementById('newButtonUrlInput');
-            const newButtonMethodSelect = document.getElementById('newButtonMethodSelect');
+            // const newButtonMethodSelect = document.getElementById('newButtonMethodSelect'); // REMOVED: No longer using select dropdown
             const saveNewButton = document.getElementById('saveNewButton');
             const statusMessageDiv = document.getElementById('statusMessage');
             const savedButtonsListDiv = document.getElementById('savedButtonsList');
+
+            // Get the container for the new method buttons
+            const methodSelectionDiv = document.getElementById('methodSelection');
+            // Initialize selectedMethod with a default (GET)
+            let selectedMethod = 'GET';
 
             // --- Functions to manage saved buttons ---
 
@@ -411,7 +463,16 @@
                     const buttonToEdit = buttons[index];
                     newButtonNameInput.value = buttonToEdit.name;
                     newButtonUrlInput.value = buttonToEdit.url;
-                    newButtonMethodSelect.value = buttonToEdit.method; // Set the selected method
+
+                    // Update the active method button and selectedMethod variable
+                    document.querySelectorAll('.method-btn').forEach(btn => {
+                        btn.classList.remove('active'); // Deactivate all
+                        if (btn.dataset.method === buttonToEdit.method) {
+                            btn.classList.add('active'); // Activate the matching button
+                            selectedMethod = buttonToEdit.method; // Update the JS variable
+                        }
+                    });
+
                     saveNewButton.textContent = 'Update Button'; // Change text to "Update"
                     editingIndex = index; // Store the index of the button being edited
                     statusMessageDiv.textContent = `Editing: "${buttonToEdit.name}"`;
@@ -423,7 +484,16 @@
             function resetForm() {
                 newButtonNameInput.value = '';
                 newButtonUrlInput.value = '';
-                newButtonMethodSelect.value = 'GET'; // Reset method selection to GET
+
+                // Reset method selection to GET and activate the corresponding button
+                document.querySelectorAll('.method-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.method === 'GET') {
+                        btn.classList.add('active');
+                        selectedMethod = 'GET'; // Reset selectedMethod variable
+                    }
+                });
+
                 saveNewButton.textContent = 'Save Button';
                 editingIndex = -1; // Reset editing index
                 statusMessageDiv.textContent = ''; // Clear status message
@@ -521,11 +591,30 @@
 
             // --- Event Listeners ---
 
-            // Save/Update button
+            // Event listener for HTTP method toggle buttons
+            methodSelectionDiv.addEventListener('click', function (event) {
+                // Check if a method button was clicked (by checking its class)
+                if (event.target.classList.contains('method-btn')) {
+                    // Remove 'active' class from all method buttons
+                    document.querySelectorAll('.method-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+
+                    // Add 'active' class to the clicked button
+                    event.target.classList.add('active');
+
+                    // Update the selectedMethod variable with the data-method attribute
+                    selectedMethod = event.target.dataset.method;
+                }
+            });
+
+
+            // Save/Update button click handler
             saveNewButton.addEventListener('click', function () {
                 const name = newButtonNameInput.value.trim();
                 const url = newButtonUrlInput.value.trim();
-                const method = newButtonMethodSelect.value;
+                // Use the globally tracked 'selectedMethod' instead of the dropdown's value
+                const method = selectedMethod;
 
                 if (!name || !url) {
                     statusMessageDiv.className = 'error';
@@ -554,6 +643,9 @@
 
             // Initial render of saved buttons when the page loads
             renderSavedButtons();
+
+            // Ensure the 'GET' button is active by default on page load
+            document.querySelector('.method-btn[data-method="GET"]').classList.add('active');
         });
     </script>
 </body>
