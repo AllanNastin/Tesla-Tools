@@ -194,6 +194,8 @@
             align-items: flex-start;
             gap: 10px;
             /* Spacing between internal elements */
+            position: relative;
+            /* Needed for positioning the delete button */
         }
 
         .buttons-list-section .button-item button {
@@ -225,6 +227,44 @@
             color: #bbbbbb;
             word-break: break-all;
             /* Ensure long URLs break to prevent overflow */
+        }
+
+        .delete-button {
+            background-color: #dc3545;
+            /* Red for delete */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            /* Make it round */
+            width: 30px;
+            /* Fixed size */
+            height: 30px;
+            /* Fixed size */
+            font-size: 1.2em;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: absolute;
+            /* Position relative to .button-item */
+            top: 10px;
+            right: 10px;
+            box-shadow: 0 2px 5px rgba(220, 53, 69, 0.4);
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            padding: 0;
+            /* Remove padding */
+            line-height: 1;
+            /* Adjust line height for better centering of 'X' */
+        }
+
+        .delete-button:hover {
+            background-color: #c82333;
+            transform: scale(1.1);
+        }
+
+        .delete-button:active {
+            transform: scale(1.0);
         }
 
         .buttons-list-section .no-buttons-message {
@@ -294,6 +334,21 @@
                 }
             }
 
+            // Function to delete a button by its index
+            function deleteButton(index) {
+                let buttons = loadButtons();
+                if (index > -1 && index < buttons.length) {
+                    buttons.splice(index, 1); // Remove the button at the specified index
+                    saveButtons(buttons); // Save the updated array
+                    renderSavedButtons(); // Re-render the list
+                    statusMessageDiv.className = 'success';
+                    statusMessageDiv.textContent = 'Button deleted successfully.';
+                } else {
+                    statusMessageDiv.className = 'error';
+                    statusMessageDiv.textContent = 'Error: Button not found for deletion.';
+                }
+            }
+
             // Function to render all saved buttons on the page
             function renderSavedButtons() {
                 const buttons = loadButtons();
@@ -304,7 +359,7 @@
                     return;
                 }
 
-                buttons.forEach(button => {
+                buttons.forEach((button, index) => { // Added index to the forEach loop
                     const buttonItem = document.createElement('div');
                     buttonItem.className = 'button-item';
 
@@ -320,9 +375,17 @@
                     actionButton.textContent = `Activate ${button.name}`; // Action button for specific command
                     actionButton.addEventListener('click', () => triggerWebhook(button.url, button.name));
 
+                    // Create Delete Button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-button';
+                    deleteBtn.textContent = 'X'; // Simple 'X' for delete
+                    deleteBtn.title = `Delete "${button.name}"`;
+                    deleteBtn.addEventListener('click', () => deleteButton(index)); // Pass the index for deletion
+
                     buttonItem.appendChild(buttonLabel);
                     buttonItem.appendChild(buttonUrlDisplay);
                     buttonItem.appendChild(actionButton);
+                    buttonItem.appendChild(deleteBtn);
                     savedButtonsListDiv.appendChild(buttonItem);
                 });
             }
