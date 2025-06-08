@@ -68,7 +68,9 @@
 
         /* Styling for the input fields and textarea */
         input[type="text"],
-        textarea {
+        textarea,
+        select {
+            /* Added select for styling consistency */
             width: calc(100% - 20px);
             /* Full width minus padding */
             padding: 15px 10px;
@@ -99,7 +101,9 @@
         }
 
         input[type="text"]:focus,
-        textarea:focus {
+        textarea:focus,
+        select:focus {
+            /* Added select for focus style */
             outline: none;
             border-color: #cc0000;
             /* Highlight focus with Tesla red */
@@ -195,7 +199,7 @@
             gap: 10px;
             /* Spacing between internal elements */
             position: relative;
-            /* Needed for positioning the delete button */
+            /* Needed for positioning the delete/modify buttons */
         }
 
         .buttons-list-section .button-item button {
@@ -229,42 +233,67 @@
             /* Ensure long URLs break to prevent overflow */
         }
 
-        .delete-button {
-            background-color: #dc3545;
-            /* Red for delete */
+        .buttons-list-section .button-item .button-method {
+            /* Style for displaying method */
+            font-size: 0.8em;
+            color: #999999;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        /* Styles for utility buttons (delete, modify) */
+        .utility-buttons {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            /* Space between utility buttons */
+        }
+
+        .utility-buttons button {
+            background-color: #6c757d;
+            /* Grey for utility buttons */
             color: white;
             border: none;
-            border-radius: 50%;
-            /* Make it round */
-            width: 30px;
-            /* Fixed size */
-            height: 30px;
-            /* Fixed size */
-            font-size: 1.2em;
+            border-radius: 8px;
+            /* Rounded corners for text buttons */
+            /* Removed fixed width/height to allow text to determine size */
+            padding: 5px 10px;
+            /* Add padding for text */
+            font-size: 0.9em;
+            /* Smaller font for utility buttons */
             font-weight: bold;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            position: absolute;
-            /* Position relative to .button-item */
-            top: 10px;
-            right: 10px;
-            box-shadow: 0 2px 5px rgba(220, 53, 69, 0.4);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
             transition: background-color 0.2s ease, transform 0.1s ease;
-            padding: 0;
-            /* Remove padding */
             line-height: 1;
-            /* Adjust line height for better centering of 'X' */
+            /* Adjust line height for better centering of text */
+        }
+
+        .utility-buttons button:hover {
+            background-color: #5a6268;
+            transform: scale(1.05);
+            /* Slightly less aggressive scale for text buttons */
+        }
+
+        .utility-buttons button:active {
+            transform: scale(1.0);
+        }
+
+        /* Specific style for delete button */
+        .delete-button {
+            background-color: #dc3545 !important;
+            /* Override with red */
+            box-shadow: 0 2px 5px rgba(220, 53, 69, 0.4) !important;
         }
 
         .delete-button:hover {
-            background-color: #c82333;
-            transform: scale(1.1);
-        }
-
-        .delete-button:active {
-            transform: scale(1.0);
+            background-color: #c82333 !important;
         }
 
         .buttons-list-section .no-buttons-message {
@@ -286,6 +315,15 @@
         <label for="newButtonUrlInput">Webhook URL:</label>
         <textarea id="newButtonUrlInput" placeholder="Enter the webhook URL for this button" rows="3"></textarea>
 
+        <label for="newButtonMethodSelect">HTTP Method:</label>
+        <select id="newButtonMethodSelect">
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+            <option value="PATCH">PATCH</option>
+        </select>
+
         <button id="saveNewButton">Save Button</button>
         <div id="statusMessage"></div>
 
@@ -302,9 +340,13 @@
         // Key for storing the array of saved webhooks in localStorage
         const SAVED_WEBHOOKS_STORAGE_KEY = 'tesla_smart_home_saved_webhooks';
 
+        // Variable to keep track of the index of the button being edited
+        let editingIndex = -1; // -1 means no button is currently being edited
+
         document.addEventListener('DOMContentLoaded', function () {
             const newButtonNameInput = document.getElementById('newButtonNameInput');
             const newButtonUrlInput = document.getElementById('newButtonUrlInput');
+            const newButtonMethodSelect = document.getElementById('newButtonMethodSelect');
             const saveNewButton = document.getElementById('saveNewButton');
             const statusMessageDiv = document.getElementById('statusMessage');
             const savedButtonsListDiv = document.getElementById('savedButtonsList');
@@ -315,7 +357,13 @@
             function loadButtons() {
                 try {
                     const savedButtonsJson = localStorage.getItem(SAVED_WEBHOOKS_STORAGE_KEY);
-                    return savedButtonsJson ? JSON.parse(savedButtonsJson) : [];
+                    const buttons = savedButtonsJson ? JSON.parse(savedButtonsJson) : [];
+                    // Ensure each button has a 'method' property, defaulting to 'GET' if missing
+                    return buttons.map(button => ({
+                        name: button.name,
+                        url: button.url,
+                        method: button.method || 'GET' // Default to GET if method is not set
+                    }));
                 } catch (e) {
                     console.error("Error parsing saved buttons from localStorage:", e);
                     return []; // Return empty array on error
@@ -343,10 +391,43 @@
                     renderSavedButtons(); // Re-render the list
                     statusMessageDiv.className = 'success';
                     statusMessageDiv.textContent = 'Button deleted successfully.';
+                    // If the deleted button was the one being edited, reset the form
+                    if (editingIndex === index) {
+                        resetForm();
+                    } else if (editingIndex > index) {
+                        // If deleting an item before the edited item, adjust editingIndex
+                        editingIndex--;
+                    }
                 } else {
                     statusMessageDiv.className = 'error';
                     statusMessageDiv.textContent = 'Error: Button not found for deletion.';
                 }
+            }
+
+            // Function to populate input fields for editing
+            function populateForEdit(index) {
+                const buttons = loadButtons();
+                if (index > -1 && index < buttons.length) {
+                    const buttonToEdit = buttons[index];
+                    newButtonNameInput.value = buttonToEdit.name;
+                    newButtonUrlInput.value = buttonToEdit.url;
+                    newButtonMethodSelect.value = buttonToEdit.method; // Set the selected method
+                    saveNewButton.textContent = 'Update Button'; // Change text to "Update"
+                    editingIndex = index; // Store the index of the button being edited
+                    statusMessageDiv.textContent = `Editing: "${buttonToEdit.name}"`;
+                    statusMessageDiv.className = ''; // Clear status class
+                }
+            }
+
+            // Function to reset the form to "Save New Button" state
+            function resetForm() {
+                newButtonNameInput.value = '';
+                newButtonUrlInput.value = '';
+                newButtonMethodSelect.value = 'GET'; // Reset method selection to GET
+                saveNewButton.textContent = 'Save Button';
+                editingIndex = -1; // Reset editing index
+                statusMessageDiv.textContent = ''; // Clear status message
+                statusMessageDiv.className = ''; // Clear status class
             }
 
             // Function to render all saved buttons on the page
@@ -359,7 +440,7 @@
                     return;
                 }
 
-                buttons.forEach((button, index) => { // Added index to the forEach loop
+                buttons.forEach((button, index) => {
                     const buttonItem = document.createElement('div');
                     buttonItem.className = 'button-item';
 
@@ -367,51 +448,70 @@
                     buttonLabel.className = 'button-label';
                     buttonLabel.textContent = button.name;
 
+                    // Display method alongside name
+                    const buttonMethodDisplay = document.createElement('span');
+                    buttonMethodDisplay.className = 'button-method';
+                    buttonMethodDisplay.textContent = `(${button.method})`;
+                    buttonLabel.appendChild(buttonMethodDisplay);
+
+
                     const buttonUrlDisplay = document.createElement('div');
                     buttonUrlDisplay.className = 'button-url';
                     buttonUrlDisplay.textContent = button.url;
 
                     const actionButton = document.createElement('button');
-                    actionButton.textContent = `Activate ${button.name}`; // Action button for specific command
-                    actionButton.addEventListener('click', () => triggerWebhook(button.url, button.name));
+                    actionButton.textContent = `${button.name}`;
+                    actionButton.addEventListener('click', () => triggerWebhook(button.url, button.name, button.method)); // Pass method
+
+                    // Utility buttons container
+                    const utilityButtonsContainer = document.createElement('div');
+                    utilityButtonsContainer.className = 'utility-buttons';
+
+                    // Create Modify Button with text
+                    const modifyBtn = document.createElement('button');
+                    modifyBtn.textContent = 'Edit'; // Changed to text "Edit"
+                    modifyBtn.title = `Modify "${button.name}"`;
+                    modifyBtn.addEventListener('click', () => populateForEdit(index));
+                    utilityButtonsContainer.appendChild(modifyBtn);
 
                     // Create Delete Button
                     const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'delete-button';
-                    deleteBtn.textContent = 'X'; // Simple 'X' for delete
+                    deleteBtn.className = 'delete-button'; // Specific class for delete style
+                    deleteBtn.textContent = 'X';
                     deleteBtn.title = `Delete "${button.name}"`;
-                    deleteBtn.addEventListener('click', () => deleteButton(index)); // Pass the index for deletion
+                    deleteBtn.addEventListener('click', () => deleteButton(index));
+                    utilityButtonsContainer.appendChild(deleteBtn);
 
                     buttonItem.appendChild(buttonLabel);
                     buttonItem.appendChild(buttonUrlDisplay);
                     buttonItem.appendChild(actionButton);
-                    buttonItem.appendChild(deleteBtn);
+                    buttonItem.appendChild(utilityButtonsContainer); // Append utility buttons
                     savedButtonsListDiv.appendChild(buttonItem);
                 });
             }
 
             // Function to trigger the webhook
-            function triggerWebhook(url, buttonName = 'Command') {
+            function triggerWebhook(url, buttonName = 'Command', method = 'GET') {
                 statusMessageDiv.className = 'pending';
-                statusMessageDiv.textContent = `Sending '${buttonName}' command...`;
+                statusMessageDiv.textContent = `Sending '${buttonName}' (${method}) command...`;
 
                 const xhr = new XMLHttpRequest();
-                xhr.open('GET', url, true);
+                xhr.open(method, url, true);
 
                 xhr.onload = function () {
                     if (xhr.status >= 200 && xhr.status < 300) {
-                        statusMessageDiv.textContent = `'${buttonName}' sent successfully!`;
+                        statusMessageDiv.textContent = `'${buttonName}' (${method}) sent successfully!`;
                         statusMessageDiv.classList.remove('pending');
                         statusMessageDiv.classList.add('success');
                     } else {
-                        statusMessageDiv.textContent = `Error: '${buttonName}' failed (Status: ${xhr.status}).`;
+                        statusMessageDiv.textContent = `Error: '${buttonName}' (${method}) failed (Status: ${xhr.status}).`;
                         statusMessageDiv.classList.remove('pending');
                         statusMessageDiv.classList.add('error');
                     }
                 };
 
                 xhr.onerror = function () {
-                    statusMessageDiv.textContent = `Error: Check internet connection or URL for '${buttonName}'.`;
+                    statusMessageDiv.textContent = `Error: Check internet connection or URL for '${buttonName}' (${method}).`;
                     statusMessageDiv.classList.remove('pending');
                     statusMessageDiv.classList.add('error');
                 };
@@ -421,10 +521,11 @@
 
             // --- Event Listeners ---
 
-            // Save new button
+            // Save/Update button
             saveNewButton.addEventListener('click', function () {
                 const name = newButtonNameInput.value.trim();
                 const url = newButtonUrlInput.value.trim();
+                const method = newButtonMethodSelect.value;
 
                 if (!name || !url) {
                     statusMessageDiv.className = 'error';
@@ -433,15 +534,22 @@
                 }
 
                 let buttons = loadButtons();
-                buttons.push({ name: name, url: url }); // Add new button to array
-                saveButtons(buttons); // Save updated array
 
-                newButtonNameInput.value = ''; // Clear inputs
-                newButtonUrlInput.value = '';
-                statusMessageDiv.className = 'success';
-                statusMessageDiv.textContent = 'Button saved successfully!';
+                if (editingIndex !== -1) {
+                    // Update existing button
+                    buttons[editingIndex] = { name: name, url: url, method: method };
+                    statusMessageDiv.className = 'success';
+                    statusMessageDiv.textContent = 'Button updated successfully!';
+                } else {
+                    // Add new button
+                    buttons.push({ name: name, url: url, method: method });
+                    statusMessageDiv.className = 'success';
+                    statusMessageDiv.textContent = 'Button saved successfully!';
+                }
 
-                renderSavedButtons(); // Re-render the list of buttons
+                saveButtons(buttons);
+                resetForm();
+                renderSavedButtons();
             });
 
             // Initial render of saved buttons when the page loads
