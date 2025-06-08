@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Tesla Smart Home Control</title>
+    <title>Tesla Webhook</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         /* Basic styling for optimal display on car browsers */
@@ -187,6 +187,7 @@
         .buttons-list-section .button-item {
             background-color: #2a2a2a;
             padding: 15px;
+            padding-top: 40px;
             border-radius: 8px;
             margin-bottom: 15px;
             display: flex;
@@ -514,14 +515,15 @@
                     const buttonItem = document.createElement('div');
                     buttonItem.className = 'button-item';
 
+                    // Title of Button
                     const buttonLabel = document.createElement('div');
-                    buttonLabel.className = 'button-label';
-                    buttonLabel.textContent = button.name;
+                    // buttonLabel.className = 'button-label';
+                    // buttonLabel.textContent = button.name;
 
                     // Display method alongside name
                     const buttonMethodDisplay = document.createElement('span');
                     buttonMethodDisplay.className = 'button-method';
-                    buttonMethodDisplay.textContent = `(${button.method})`;
+                    // buttonMethodDisplay.textContent = `(${button.method})`;
                     buttonLabel.appendChild(buttonMethodDisplay);
 
 
@@ -540,7 +542,7 @@
                     // Create Modify Button with text
                     const modifyBtn = document.createElement('button');
                     modifyBtn.textContent = 'Edit'; // Changed to text "Edit"
-                    modifyBtn.title = `Modify "${button.name}"`;
+                    modifyBtn.title = `Modify ${button.name}`;
                     modifyBtn.addEventListener('click', () => populateForEdit(index));
                     utilityButtonsContainer.appendChild(modifyBtn);
 
@@ -553,7 +555,7 @@
                     utilityButtonsContainer.appendChild(deleteBtn);
 
                     buttonItem.appendChild(buttonLabel);
-                    buttonItem.appendChild(buttonUrlDisplay);
+                    // buttonItem.appendChild(buttonUrlDisplay);
                     buttonItem.appendChild(actionButton);
                     buttonItem.appendChild(utilityButtonsContainer); // Append utility buttons
                     savedButtonsListDiv.appendChild(buttonItem);
