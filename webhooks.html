@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tesla Smart Home Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        /* Basic styling for optimal display on car browsers */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            display: flex;
+            flex-direction: column; /* Stack elements vertically */
+            justify-content: center;
+            align-items: center;
+            min-height: 95vh; /* Use vh for viewport height, leave some margin */
+            margin: 0;
+            background-color: #000000; /* Dark background like Tesla UI */
+            color: #ffffff; /* White text for contrast */
+            padding: 20px; /* Add some padding around the edges */
+            box-sizing: border-box; /* Include padding in element's total width/height */
+        }
+        .container {
+            text-align: center;
+            background-color: #1a1a1a; /* Slightly lighter dark for container */
+            padding: 40px 30px; /* More vertical padding */
+            border-radius: 12px; /* Rounded corners */
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4); /* Deeper shadow */
+            max-width: 400px; /* Max width for better readability on larger screens */
+            width: 100%; /* Make it responsive */
+        }
+        h1 {
+            color: #ffffff;
+            font-size: 2.2em; /* Larger title */
+            margin-bottom: 25px;
+            letter-spacing: 1px;
+        }
+        p {
+            font-size: 1.1em;
+            color: #cccccc;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        button {
+            padding: 18px 35px; /* Larger padding for easier tapping */
+            font-size: 1.5em; /* Larger font size for button text */
+            font-weight: bold;
+            background-color: #cc0000; /* Classic Tesla Red */
+            color: white;
+            border: none;
+            border-radius: 8px; /* Slightly more rounded button */
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            width: 100%; /* Make button full width of container */
+            max-width: 300px; /* Limit max width for good proportions */
+            box-shadow: 0 4px 15px rgba(204, 0, 0, 0.4); /* Red glow effect */
+        }
+        button:hover {
+            background-color: #e60000; /* Lighter red on hover */
+            transform: translateY(-2px); /* Slight lift effect */
+        }
+        button:active {
+            background-color: #990000; /* Darker red when pressed */
+            transform: translateY(0);
+        }
+        #statusMessage {
+            margin-top: 30px; /* More space above message */
+            font-size: 1.2em;
+            font-weight: bold;
+            min-height: 1.5em; /* Reserve space to prevent layout shift */
+        }
+        .pending {
+            color: #00bfff; /* Light blue for pending */
+        }
+        .success {
+            color: #00ff00; /* Bright green for success */
+        }
+        .error {
+            color: #ff3333; /* Bright red for error */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Smart Home Hub</h1>
+        <p>Tap the button below to send the command to your smart home system.</p>
+
+        <button id="triggerButton">Send Command</button>
+        <div id="statusMessage"></div>
+
+        <script>
+            // The specific webhook URL you want to call
+            const WEBHOOK_URL = 'insert_your_webhook_url_here'; // TODO: Replace with your actual webhook URL Change bellow get to whatever you need likely POST
+
+            document.getElementById('triggerButton').addEventListener('click', function() {
+                const statusMessageDiv = document.getElementById('statusMessage');
+                statusMessageDiv.className = 'pending'; // Set to pending class
+                statusMessageDiv.textContent = 'Sending command...';
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', WEBHOOK_URL, true); // true for asynchronous
+
+                xhr.onload = function() {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        // Webhook call was successful
+                        statusMessageDiv.textContent = 'Command sent successfully!';
+                        statusMessageDiv.classList.remove('pending');
+                        statusMessageDiv.classList.add('success');
+                    } else {
+                        // Webhook returned an error status (e.g., 404, 500)
+                        statusMessageDiv.textContent = `Error: Command failed (Status: ${xhr.status}).`;
+                        statusMessageDiv.classList.remove('pending');
+                        statusMessageDiv.classList.add('error');
+                    }
+                };
+
+                xhr.onerror = function() {
+                    // Network error (e.g., internet disconnected, URL unreachable)
+                    statusMessageDiv.textContent = 'Error: Check internet connection or URL.';
+                    statusMessageDiv.classList.remove('pending');
+                    statusMessageDiv.classList.add('error');
+                };
+
+                xhr.send(); // Send the GET request
+            });
+        </script>
+    </div>
+</body>
+</html>
