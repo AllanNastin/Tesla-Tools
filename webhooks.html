@@ -57,22 +57,35 @@
             line-height: 1.5;
         }
 
-        input[type="text"] {
+        /* Styling for the textarea */
+        textarea {
             width: calc(100% - 20px);
             /* Full width minus padding */
             padding: 15px 10px;
             margin-bottom: 25px;
-            /* Space below input */
+            /* Space below textarea */
             border: 1px solid #333;
             border-radius: 8px;
             background-color: #0d0d0d;
             color: #ffffff;
             font-size: 1em;
             box-sizing: border-box;
-            /* Include padding and border in the element's total width and height */
+            /* Include padding and border in total width/height */
+            resize: vertical;
+            /* Allow vertical resizing, but no horizontal */
+            min-height: 60px;
+            /* Minimum height for the textarea */
+            overflow-y: auto;
+            /* Allow vertical scrolling if content is very long */
+            line-height: 1.4;
+            /* Improve readability for wrapped text */
+            white-space: normal;
+            /* Ensure text wraps normally */
+            word-wrap: break-word;
+            /* Break long words (like URLs) if necessary */
         }
 
-        input[type="text"]:focus {
+        textarea:focus {
             outline: none;
             border-color: #cc0000;
             /* Highlight focus with Tesla red */
@@ -145,13 +158,13 @@
         <h1>Smart Home Hub</h1>
         <p>Enter your webhook URL and tap "Send Command".</p>
 
-        <input type="text" id="webhookUrlInput" placeholder="Enter your webhook URL here">
+        <textarea id="webhookUrlInput" placeholder="Enter your webhook URL here" rows="3"></textarea>
 
         <button id="triggerButton">Send Command</button>
         <div id="statusMessage"></div>
 
         <script>
-            const WEBHOOK_STORAGE_KEY = 'tesla_smart_home_webhook_url'; //  // TODO: Replace with your actual webhook URL Change bellow get to whatever you need likely POST
+            const WEBHOOK_STORAGE_KEY = 'tesla_smart_home_webhook_url'; // TODO: Replace with your actual webhook URL Change bellow get to whatever you need likely POST
 
             document.addEventListener('DOMContentLoaded', function () {
                 const webhookUrlInput = document.getElementById('webhookUrlInput');

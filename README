@@ -2,7 +2,7 @@
 
 ## webhooks.html
 This version allows you to set a url from the MCU and it will store in local storage for next use.
-This file is a simple HTML page that allows you to send webhooks from your Tesla MCU1. You can set the default webhook URL you would like and the type of webhook you want to send. On lines 154 and 188.
+This file is a simple HTML page that allows you to send webhooks from your Tesla MCU1. You can set the default webhook URL you would like and the type of webhook you want to send. On lines 167 and 201.
 
 ### Hosting
 You can host this file on any web server. If you don't have a web server, you can use a free service like GitHub Pages or Netlify to host the file. Just upload the `webhooks.html` file to your repository and enable GitHub Pages or Netlify.
