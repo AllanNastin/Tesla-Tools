@@ -36,8 +36,8 @@
             /* Rounded corners */
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
             /* Deeper shadow */
-            max-width: 400px;
-            /* Max width for better readability on larger screens */
+            max-width: 450px;
+            /* Increased max width to accommodate more content */
             width: 100%;
             /* Make it responsive */
         }
@@ -57,13 +57,23 @@
             line-height: 1.5;
         }
 
-        /* Styling for the textarea */
+        label {
+            display: block;
+            /* Each label on its own line */
+            text-align: left;
+            margin-bottom: 8px;
+            font-size: 1em;
+            color: #cccccc;
+        }
+
+        /* Styling for the input fields and textarea */
+        input[type="text"],
         textarea {
             width: calc(100% - 20px);
             /* Full width minus padding */
             padding: 15px 10px;
-            margin-bottom: 25px;
-            /* Space below textarea */
+            margin-bottom: 15px;
+            /* Space below fields */
             border: 1px solid #333;
             border-radius: 8px;
             background-color: #0d0d0d;
@@ -71,20 +81,24 @@
             font-size: 1em;
             box-sizing: border-box;
             /* Include padding and border in total width/height */
+            line-height: 1.4;
+            /* Improve readability for wrapped text */
+        }
+
+        textarea {
             resize: vertical;
             /* Allow vertical resizing, but no horizontal */
             min-height: 60px;
             /* Minimum height for the textarea */
             overflow-y: auto;
             /* Allow vertical scrolling if content is very long */
-            line-height: 1.4;
-            /* Improve readability for wrapped text */
             white-space: normal;
             /* Ensure text wraps normally */
             word-wrap: break-word;
             /* Break long words (like URLs) if necessary */
         }
 
+        input[type="text"]:focus,
         textarea:focus {
             outline: none;
             border-color: #cc0000;
@@ -112,6 +126,10 @@
             /* Limit max width for good proportions */
             box-shadow: 0 4px 15px rgba(204, 0, 0, 0.4);
             /* Red glow effect */
+            margin-top: 10px;
+            /* Space above buttons */
+            margin-bottom: 10px;
+            /* Space below buttons */
         }
 
         button:hover {
@@ -128,12 +146,13 @@
         }
 
         #statusMessage {
-            margin-top: 30px;
+            margin-top: 20px;
             /* More space above message */
             font-size: 1.2em;
             font-weight: bold;
             min-height: 1.5em;
             /* Reserve space to prevent layout shift */
+            margin-bottom: 20px;
         }
 
         .pending {
@@ -150,79 +169,222 @@
             color: #ff3333;
             /* Bright red for error */
         }
+
+        .buttons-list-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            text-align: left;
+        }
+
+        .buttons-list-section h2 {
+            color: #ffffff;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .buttons-list-section .button-item {
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+            /* Spacing between internal elements */
+        }
+
+        .buttons-list-section .button-item button {
+            max-width: none;
+            /* Allow dynamic buttons to take full width of their container */
+            margin: 0;
+            /* Remove default button margins here */
+            padding: 12px 20px;
+            /* Slightly smaller padding for listed buttons */
+            font-size: 1.2em;
+            /* Smaller font for listed buttons */
+            background-color: #007bff;
+            /* Blue for action buttons */
+            box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+        }
+
+        .buttons-list-section .button-item button:hover {
+            background-color: #0056b3;
+        }
+
+        .buttons-list-section .button-item .button-label {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #eeeeee;
+        }
+
+        .buttons-list-section .button-item .button-url {
+            font-size: 0.9em;
+            color: #bbbbbb;
+            word-break: break-all;
+            /* Ensure long URLs break to prevent overflow */
+        }
+
+        .buttons-list-section .no-buttons-message {
+            color: #888888;
+            font-style: italic;
+            text-align: center;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <h1>Smart Home Hub</h1>
-        <p>Enter your webhook URL and tap "Send Command".</p>
+        <p>Define new buttons to control your smart home.</p>
 
-        <textarea id="webhookUrlInput" placeholder="Enter your webhook URL here" rows="3"></textarea>
+        <label for="newButtonNameInput">Button Name:</label>
+        <input type="text" id="newButtonNameInput" placeholder="e.g., Living Room Lights On">
 
-        <button id="triggerButton">Send Command</button>
+        <label for="newButtonUrlInput">Webhook URL:</label>
+        <textarea id="newButtonUrlInput" placeholder="Enter the webhook URL for this button" rows="3"></textarea>
+
+        <button id="saveNewButton">Save Button</button>
         <div id="statusMessage"></div>
 
-        <script>
-            const WEBHOOK_STORAGE_KEY = 'tesla_smart_home_webhook_url'; // TODO: Replace with your actual webhook URL Change bellow get to whatever you need likely POST
+        <div class="buttons-list-section">
+            <h2>Your Saved Buttons</h2>
+            <div id="savedButtonsList">
+                <!-- Saved buttons will be rendered here by JavaScript -->
+                <p class="no-buttons-message">No buttons saved yet.</p>
+            </div>
+        </div>
+    </div>
 
-            document.addEventListener('DOMContentLoaded', function () {
-                const webhookUrlInput = document.getElementById('webhookUrlInput');
-                const triggerButton = document.getElementById('triggerButton');
-                const statusMessageDiv = document.getElementById('statusMessage');
+    <script>
+        // Key for storing the array of saved webhooks in localStorage
+        const SAVED_WEBHOOKS_STORAGE_KEY = 'tesla_smart_home_saved_webhooks';
 
-                // Load webhook URL from localStorage on page load
-                const savedWebhookUrl = localStorage.getItem(WEBHOOK_STORAGE_KEY);
-                if (savedWebhookUrl) {
-                    webhookUrlInput.value = savedWebhookUrl;
-                } else {
-                    // Optional: Set a default or hint if nothing is saved
-                    webhookUrlInput.value = 'insert_your_webhook_url_here';
+        document.addEventListener('DOMContentLoaded', function () {
+            const newButtonNameInput = document.getElementById('newButtonNameInput');
+            const newButtonUrlInput = document.getElementById('newButtonUrlInput');
+            const saveNewButton = document.getElementById('saveNewButton');
+            const statusMessageDiv = document.getElementById('statusMessage');
+            const savedButtonsListDiv = document.getElementById('savedButtonsList');
+
+            // --- Functions to manage saved buttons ---
+
+            // Function to load buttons from localStorage
+            function loadButtons() {
+                try {
+                    const savedButtonsJson = localStorage.getItem(SAVED_WEBHOOKS_STORAGE_KEY);
+                    return savedButtonsJson ? JSON.parse(savedButtonsJson) : [];
+                } catch (e) {
+                    console.error("Error parsing saved buttons from localStorage:", e);
+                    return []; // Return empty array on error
+                }
+            }
+
+            // Function to save buttons to localStorage
+            function saveButtons(buttons) {
+                try {
+                    localStorage.setItem(SAVED_WEBHOOKS_STORAGE_KEY, JSON.stringify(buttons));
+                } catch (e) {
+                    console.error("Error saving buttons to localStorage:", e);
+                    // Inform the user if storage is full or other issue
+                    statusMessageDiv.className = 'error';
+                    statusMessageDiv.textContent = 'Error saving button: Storage might be full.';
+                }
+            }
+
+            // Function to render all saved buttons on the page
+            function renderSavedButtons() {
+                const buttons = loadButtons();
+                savedButtonsListDiv.innerHTML = ''; // Clear existing buttons
+
+                if (buttons.length === 0) {
+                    savedButtonsListDiv.innerHTML = '<p class="no-buttons-message">No buttons saved yet.</p>';
+                    return;
                 }
 
-                // Save webhook URL to localStorage whenever the input changes
-                webhookUrlInput.addEventListener('input', function () {
-                    localStorage.setItem(WEBHOOK_STORAGE_KEY, webhookUrlInput.value);
+                buttons.forEach(button => {
+                    const buttonItem = document.createElement('div');
+                    buttonItem.className = 'button-item';
+
+                    const buttonLabel = document.createElement('div');
+                    buttonLabel.className = 'button-label';
+                    buttonLabel.textContent = button.name;
+
+                    const buttonUrlDisplay = document.createElement('div');
+                    buttonUrlDisplay.className = 'button-url';
+                    buttonUrlDisplay.textContent = button.url;
+
+                    const actionButton = document.createElement('button');
+                    actionButton.textContent = `Activate ${button.name}`; // Action button for specific command
+                    actionButton.addEventListener('click', () => triggerWebhook(button.url, button.name));
+
+                    buttonItem.appendChild(buttonLabel);
+                    buttonItem.appendChild(buttonUrlDisplay);
+                    buttonItem.appendChild(actionButton);
+                    savedButtonsListDiv.appendChild(buttonItem);
                 });
+            }
 
-                triggerButton.addEventListener('click', function () {
-                    const currentWebhookUrl = webhookUrlInput.value.trim();
+            // Function to trigger the webhook
+            function triggerWebhook(url, buttonName = 'Command') {
+                statusMessageDiv.className = 'pending';
+                statusMessageDiv.textContent = `Sending '${buttonName}' command...`;
 
-                    if (!currentWebhookUrl) {
-                        statusMessageDiv.className = 'error';
-                        statusMessageDiv.textContent = 'Error: Please enter a webhook URL.';
-                        return; // Stop execution if no URL is entered
-                    }
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', url, true);
 
-                    statusMessageDiv.className = 'pending';
-                    statusMessageDiv.textContent = 'Sending command...';
-
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('GET', currentWebhookUrl, true); // true for asynchronous
-
-                    xhr.onload = function () {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            statusMessageDiv.textContent = 'Command sent successfully!';
-                            statusMessageDiv.classList.remove('pending');
-                            statusMessageDiv.classList.add('success');
-                        } else {
-                            statusMessageDiv.textContent = `Error: Command failed (Status: ${xhr.status}).`;
-                            statusMessageDiv.classList.remove('pending');
-                            statusMessageDiv.classList.add('error');
-                        }
-                    };
-
-                    xhr.onerror = function () {
-                        statusMessageDiv.textContent = 'Error: Check internet connection or URL.';
+                xhr.onload = function () {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        statusMessageDiv.textContent = `'${buttonName}' sent successfully!`;
+                        statusMessageDiv.classList.remove('pending');
+                        statusMessageDiv.classList.add('success');
+                    } else {
+                        statusMessageDiv.textContent = `Error: '${buttonName}' failed (Status: ${xhr.status}).`;
                         statusMessageDiv.classList.remove('pending');
                         statusMessageDiv.classList.add('error');
-                    };
+                    }
+                };
 
-                    xhr.send();
-                });
+                xhr.onerror = function () {
+                    statusMessageDiv.textContent = `Error: Check internet connection or URL for '${buttonName}'.`;
+                    statusMessageDiv.classList.remove('pending');
+                    statusMessageDiv.classList.add('error');
+                };
+
+                xhr.send();
+            }
+
+            // --- Event Listeners ---
+
+            // Save new button
+            saveNewButton.addEventListener('click', function () {
+                const name = newButtonNameInput.value.trim();
+                const url = newButtonUrlInput.value.trim();
+
+                if (!name || !url) {
+                    statusMessageDiv.className = 'error';
+                    statusMessageDiv.textContent = 'Error: Please enter both a button name and a webhook URL.';
+                    return;
+                }
+
+                let buttons = loadButtons();
+                buttons.push({ name: name, url: url }); // Add new button to array
+                saveButtons(buttons); // Save updated array
+
+                newButtonNameInput.value = ''; // Clear inputs
+                newButtonUrlInput.value = '';
+                statusMessageDiv.className = 'success';
+                statusMessageDiv.textContent = 'Button saved successfully!';
+
+                renderSavedButtons(); // Re-render the list of buttons
             });
-        </script>
-    </div>
+
+            // Initial render of saved buttons when the page loads
+            renderSavedButtons();
+        });
+    </script>
 </body>
 
 </html>
